@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getEntries } from '../api';
 import EntryItem from './EntryItem';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function EntryList() {
 const [entries, setEntries] = useState([]);
@@ -19,9 +19,35 @@ return (
     <div>
     <h2>My Journal</h2>
     <button onClick={() => navigate('/new')}>New Entry</button>
-    {entries.map(entry => (
-        <EntryItem key={entry._id} entry={entry} onDelete={handleDelete} />
-    ))}
+    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+        <thead>
+          <tr>
+            <th style={{ padding: '10px', border: '1px solid #ddd' }}>Title</th>
+            <th style={{ padding: '10px', border: '1px solid #ddd' }}>Content</th>
+            <th style={{ padding: '10px', border: '1px solid #ddd' }}>Created At</th>
+            <th style={{ padding: '10px', border: '1px solid #ddd' }}>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(entry => (
+            <tr key={entry._id}>
+              <td style={{ padding: '10px', border: '1px solid #ddd' }}>{entry.title}</td>
+              <td style={{ padding: '10px', border: '1px solid #ddd' }}>{entry.content}</td>
+              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                {new Date(entry.createdAt).toLocaleString()}
+              </td>
+              <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                <Link to={`/update/${entry._id}`}>
+                  <button>Update</button>
+                </Link>
+                <button onClick={() => handleDelete(entry._id)} style={{ padding: '5px 10px', background: '#f44336', color: 'white', border: 'none', borderRadius: '4px' }}>
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
 );
 }
