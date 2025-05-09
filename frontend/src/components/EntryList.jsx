@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getEntries } from '../api';
+import { getEntries, deleteEntry } from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 import 'react-datepicker/dist/react-datepicker.css';
 import DatePicker from 'react-datepicker';
@@ -12,6 +12,9 @@ const [entries, setEntries] = useState([]); //for all journal entries
 const [searchTerm, setSearchTerm] = useState(''); //for filtering using title
 const [selectedDate, setSelectedDate] = useState(null); // for filtering using dates
 const [selectedEntry, setSelectedEntry] = useState(null); //for popup display
+const [currentPage, setCurrentPage] = useState(1); //for pagination logic
+const [sortOption, setSortOption] = useState(''); // for sorting logic
+const entriesPerPage = 5;
 const navigate = useNavigate();
 
 // fetches all entries from db
@@ -20,8 +23,15 @@ useEffect(() => {
 }, []);
 
 // deletion logic
-const handleDelete = (id) => {
-    setEntries(entries.filter(entry => entry._id !== id));
+const handleDelete = async (id) => {
+    try {
+      await deleteEntry(id);
+      setEntries(entries.filter(entry => entry._id !== id));
+    } catch (error) {
+      console.error('Failed to delete entry:', error);
+      alert('Could not delete the entry. Try again.');
+    }
+    
 };
 
 
@@ -32,11 +42,38 @@ const filteredEntries = entries.filter(entry => {
     ? new Date(entry.createdAt).toDateString() === selectedDate.toDateString()
     : true;
   return matchesTitle && matchesDate;
+}).sort((a, b) => {
+  switch (sortOption) {
+    case 'az':
+      return a.title.localeCompare(b.title);
+    case 'za':
+      return b.title.localeCompare(a.title);
+    case 'newest':
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    case 'oldest':
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    default:
+      return 0;
+  }
 });
+
+// fetching current entries out of filtered entries for pagination
+const indexOfLastEntry = currentPage * entriesPerPage;
+const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
+const currentEntries = filteredEntries.slice(indexOfFirstEntry, indexOfLastEntry);
 
 return (
     <div>
     <h2>My Journal</h2>
+
+    {/* for sorting options */}
+    <select value={sortOption} onChange={(e) => setSortOption(e.target.value)} style={{ marginRight: '10px' }}>
+      <option value="">Sort By</option>
+      <option value="az">Title A-Z</option>
+      <option value="za">Title Z-A</option>
+      <option value="newest">Newest to Oldest</option>
+      <option value="oldest">Oldest to Newest</option>
+    </select>
     
     {/* search bar code */}
     <input
@@ -69,10 +106,10 @@ return (
           </tr>
         </thead>
         <tbody>
-          {filteredEntries.length === 0 ? (
+          {currentEntries.length === 0 ? (
             <p>No entries found.</p>
           ) : (
-            filteredEntries.map(entry => (
+            currentEntries.map(entry => (
 
               // we placed onclick function on table row so selected entry can be set and shown in popup
               <tr key={entry._id} onClick={() => setSelectedEntry(entry)} style={{ cursor: 'pointer' }}>
@@ -105,6 +142,28 @@ return (
           
         </tbody>
       </table>
+
+
+      {/* Pagination Controls */}
+      <div style={{ marginTop: '20px' }}>
+        {Array.from({ length: Math.ceil(filteredEntries.length / entriesPerPage) }, (_, index) => (
+          <button
+            key={index + 1}
+            onClick={() => setCurrentPage(index + 1)}
+            style={{
+              margin: '0 5px',
+              padding: '5px 10px',
+              background: currentPage === index + 1 ? '#007bff' : '#eee',
+              color: currentPage === index + 1 ? '#fff' : '#000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
 
        {/* Modal Popup logic */}
        {selectedEntry && (
